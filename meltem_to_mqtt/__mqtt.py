@@ -63,7 +63,7 @@ class MqttClient:
         self.client.on_connect = self.__on_connect
         self.client.on_disconnect = self.__on_disconnect
         self.client.on_message = self.__on_message
-        self.logger.debug(f"connect to {self.broker} as user {self.port}")
+        self.logger.debug(f"connect to {self.broker}:{self.port} as user {self.username}")
         self.client.connect_async(self.broker)
         self.client.loop_start()
 
