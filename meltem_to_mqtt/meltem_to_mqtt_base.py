@@ -74,6 +74,7 @@ class Meltem2MQTT:
         parser.add_argument("--mqtt-username", type=str, dest="mqttusername", help="Username for MQTT broker")
         parser.add_argument("--mqtt-password", type=str, dest="mqttpassword", help="Password for MQTT broker")
         parser.add_argument("--mqtt-basetopic", type=str, dest="mqttbasetopic", help="Base topic of mqtt messages", default=DEFAULT_ARGS["mqttbasetopic"])
+        parser.add_argument("--mqtt-retain", type=bool, dest="mqttretain", help="Value of the retain flag for the MQTT messages", default=False)
 
         args = parser.parse_args()
 
@@ -172,7 +173,7 @@ class Meltem2MQTT:
                         data_json = json.dumps(data)
                         if data_json != last_data_json:
                             # print(data)
-                            self.mqtt.publish(f"live", data)
+                            self.mqtt.publish(f"live", data, args.mqttretain)
                             last_data_json = data_json
                     finally:
                         self.lock.release()
