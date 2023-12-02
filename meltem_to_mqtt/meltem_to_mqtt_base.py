@@ -21,6 +21,7 @@ DEFAULT_ARGS = {
     "mqttport": 1883,
     "mqttkeepalive": 60,
     "mqttbasetopic": "meltem/",
+    "tty": "/dev/ttyUSB0",
 }
 
 
@@ -62,6 +63,7 @@ class Meltem2MQTT:
         parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
         parser.add_argument("--releaseName", type=str, dest="releaseName", help="Name of the current release")
         parser.add_argument("--configFile", type=str, dest="configFile", help="File where config is stored (JSON)")
+        parser.add_argument("--tty", type=str, dest="tty", help="Which serial device to use", default=DEFAULT_ARGS["tty"])
         parser.add_argument("--loglevel", type=str, dest="loglevel", help='Minimum log level, DEBUG/INFO/WARNING/ERROR/CRITICAL"', default=DEFAULT_ARGS["loglevel"])
         parser.add_argument("--interval", type=float, dest="interval", help="Interval in seconds in which E3/DC data is requested. Minimum: 1.0", default=DEFAULT_ARGS["interval"])
 
@@ -81,6 +83,7 @@ class Meltem2MQTT:
             self.__add_from_config(args, config, "loglevel")
             self.__add_from_config(args, config, "interval")
 
+            self.__add_from_config(args, config, "tty")
             self.__add_from_config(args, config, "mqttbroker")
             self.__add_from_config(args, config, "mqttport")
             self.__add_from_config(args, config, "mqttclientid")
@@ -115,7 +118,8 @@ class Meltem2MQTT:
             self.mqtt.subscribe_to("/register/write", self.__on_write_register)
             self.mqtt.subscribe_to("/register/read", self.__on_read_register)
 
-            self.bus = minimalmodbus.Instrument("/dev/ttyUSB0", 1)
+            LOGGER.info("Using tty %s" % args.tty)
+            self.bus = minimalmodbus.Instrument(args.tty, 1)
             self.bus.serial.parity = serial.PARITY_EVEN
             print(f"address={self.bus.address}")
             print(f"mode={self.bus.mode}")
