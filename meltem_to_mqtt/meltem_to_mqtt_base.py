@@ -5,6 +5,7 @@ import json
 import time
 import serial
 import threading
+import math
 from enum import Enum
 from concurrent.futures._base import CancelledError
 
@@ -92,6 +93,7 @@ class Meltem2MQTT:
             self.__add_from_config(args, config, "mqttusername")
             self.__add_from_config(args, config, "mqttpassword")
             self.__add_from_config(args, config, "mqttbasetopic")
+            self.__add_from_config(args, config, "mqttretain")
 
         valid_loglevels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
         if args.loglevel not in valid_loglevels:
@@ -165,15 +167,18 @@ class Meltem2MQTT:
                             # 'operating_hours_motors':   self.__read_uint32(41032),
                         }
 
-                        temperature_difference_inside_outside = abs(data["temp_room_out"] - data["temp_outdoor_in"])
-                        if temperature_difference_inside_outside != 0:
-                            temperature_difference_inlet = abs(data["temp_outdoor_in"] - data["temp_room_in"])
-                            data["heatexchanger_efficiency"] = temperature_difference_inlet / temperature_difference_inside_outside * 100.0
+                        if data["temp_room_out"] is None or data["temp_outdoor_in"] is None or data["temp_room_in"] is None:
+                            data["heatexchanger_efficiency"] = None
+                        else:
+                            temperature_difference_inside_outside = abs(data["temp_room_out"] - data["temp_outdoor_in"])
+                            if temperature_difference_inside_outside != 0:
+                                temperature_difference_inlet = abs(data["temp_outdoor_in"] - data["temp_room_in"])
+                                data["heatexchanger_efficiency"] = temperature_difference_inlet / temperature_difference_inside_outside * 100.0
 
                         data_json = json.dumps(data)
                         if data_json != last_data_json:
                             # print(data)
-                            self.mqtt.publish(f"live", data, args.mqttretain)
+                            self.mqtt.publish(f"live", data, retain=args.mqttretain)
                             last_data_json = data_json
                     finally:
                         self.lock.release()
@@ -320,13 +325,29 @@ class Meltem2MQTT:
             return MeltemMode.inconsistent
 
     def __read_uint8(self, register_address: int):
-        return self.bus.read_register(register_address)
+        value = self.bus.read_register(register_address)
+        if math.isnan(value):
+            return None
+        else:
+            return self.bus.read_register(register_address)
 
     def __read_uint16(self, register_address: int):
-        return self.bus.read_register(register_address)
+        value = self.bus.read_register(register_address)
+        if math.isnan(value):
+            return None
+        else:
+            return self.bus.read_register(register_address)
 
     def __read_uint32(self, register_address: int):
-        return self.bus.read_long(register_address)
+        value = self.bus.read_long(register_address)
+        if math.isnan(value):
+            return None
+        else:
+            return self.bus.read_long(register_address)
 
     def __read_float(self, register_address: int):
-        return self.bus.read_float(register_address, byteorder=minimalmodbus.BYTEORDER_LITTLE_SWAP)
+        value = self.bus.read_float(register_address, byteorder=minimalmodbus.BYTEORDER_LITTLE_SWAP)
+        if math.isnan(value):
+            return None
+        else:
+            return self.bus.read_float(register_address, byteorder=minimalmodbus.BYTEORDER_LITTLE_SWAP)
