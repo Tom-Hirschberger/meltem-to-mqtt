@@ -76,6 +76,7 @@ class Meltem2MQTT:
         parser.add_argument("--mqtt-password", type=str, dest="mqttpassword", help="Password for MQTT broker")
         parser.add_argument("--mqtt-basetopic", type=str, dest="mqttbasetopic", help="Base topic of mqtt messages", default=DEFAULT_ARGS["mqttbasetopic"])
         parser.add_argument("--mqtt-retain", type=bool, dest="mqttretain", help="Value of the retain flag for the MQTT messages", default=False)
+        parser.add_argument("--mqtt-force-send", type=bool, dest="mqttforcesend", help="Send data to MQTT even if the data did not change", default=False)
 
         args = parser.parse_args()
 
@@ -94,6 +95,7 @@ class Meltem2MQTT:
             self.__add_from_config(args, config, "mqttpassword")
             self.__add_from_config(args, config, "mqttbasetopic")
             self.__add_from_config(args, config, "mqttretain")
+            self.__add_from_config(args, config, "mqttforcesend")
 
         valid_loglevels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
         if args.loglevel not in valid_loglevels:
@@ -176,7 +178,7 @@ class Meltem2MQTT:
                                 data["heatexchanger_efficiency"] = temperature_difference_inlet / temperature_difference_inside_outside * 100.0
 
                         data_json = json.dumps(data)
-                        if data_json != last_data_json:
+                        if (data_json != last_data_json) or args.mqttforcesend:
                             # print(data)
                             self.mqtt.publish(f"live", data, retain=args.mqttretain)
                             last_data_json = data_json
