@@ -19,6 +19,7 @@ LOGGER = logging.getLogger("meltem-to-mqtt")
 DEFAULT_ARGS = {
     "loglevel": "WARNING",
     "interval": 1.0,
+    "mqttmaxinterval": 30,
     "mqttport": 1883,
     "mqttkeepalive": 60,
     "mqttbasetopic": "meltem/",
@@ -77,6 +78,7 @@ class Meltem2MQTT:
         parser.add_argument("--mqtt-basetopic", type=str, dest="mqttbasetopic", help="Base topic of mqtt messages", default=DEFAULT_ARGS["mqttbasetopic"])
         parser.add_argument("--mqtt-retain", type=bool, dest="mqttretain", help="Value of the retain flag for the MQTT messages", default=False)
         parser.add_argument("--mqtt-force-send", type=bool, dest="mqttforcesend", help="Send data to MQTT even if the data did not change", default=False)
+        parser.add_argument("--mqtt-max-interval", type=bool, dest="mqttmaxinterval", help="If --mqtt-force-send option is set the maximum interval between two data sends can be specified", default=DEFAULT_ARGS["mqttmaxinterval"])
 
         args = parser.parse_args()
 
@@ -96,6 +98,7 @@ class Meltem2MQTT:
             self.__add_from_config(args, config, "mqttbasetopic")
             self.__add_from_config(args, config, "mqttretain")
             self.__add_from_config(args, config, "mqttforcesend")
+            self.__add_from_config(args, config, "mqttmaxinterval")
 
         valid_loglevels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
         if args.loglevel not in valid_loglevels:
@@ -134,6 +137,7 @@ class Meltem2MQTT:
 
             last_data_json = ""
             last_cycle = 0.0
+            last_mqtt_send = 0.0
             while True:
                 await asyncio.sleep(max(0, args.interval - (time.time() - last_cycle)))
                 last_cycle = time.time()
@@ -178,9 +182,10 @@ class Meltem2MQTT:
                                 data["heatexchanger_efficiency"] = temperature_difference_inlet / temperature_difference_inside_outside * 100.0
 
                         data_json = json.dumps(data)
-                        if (data_json != last_data_json) or args.mqttforcesend:
+                        if (data_json != last_data_json) or (args.mqttforcesend and ((time.time() - last_mqtt_send) > args.mqttmaxinterval)):
                             # print(data)
                             self.mqtt.publish(f"live", data, retain=args.mqttretain)
+                            last_mqtt_send = time.time()
                             last_data_json = data_json
                     finally:
                         self.lock.release()
