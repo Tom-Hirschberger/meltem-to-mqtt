@@ -252,7 +252,7 @@ class Meltem2MQTT:
         if requested_mode == MeltemMode.off.name:
             write_data = {41120: 1, 41132: 0}
         elif requested_mode == MeltemMode.manual_balanced.name:
-            throughput = getattr(msg.payload, "throughput")
+            throughput = getattr(msg.payload, "throughput", None)
             if throughput is None:
                 LOGGER.error('no value for "throughput" provided')
                 return
@@ -270,8 +270,8 @@ class Meltem2MQTT:
         elif requested_mode == MeltemMode.automatic.name:
             write_data = {41120: 2, 41121: 16, 41132: 0}
         elif requested_mode == MeltemMode.manual_unbalanced.name:
-            throughput_in = getattr(msg.payload, "throughput_in")
-            throughput_out = getattr(msg.payload, "throughput_out")
+            throughput_in = getattr(msg.payload, "throughput_in", None)
+            throughput_out = getattr(msg.payload, "throughput_out", None)
             if throughput_in is None:
                 LOGGER.error("no throughput_in provided")
                 return
